@@ -52,6 +52,7 @@ enum nft_registers {
 #define NFT_REG_MAX (__NFT_REG_MAX - 1)
 #define NFT_REG_SIZE 16
 #define NFT_REG32_SIZE 4
+#define NFT_REG32_COUNT (NFT_REG32_15 - NFT_REG32_00 + 1)
 enum nft_verdicts {
   NFT_CONTINUE = - 1,
   NFT_BREAK = - 2,
@@ -88,7 +89,7 @@ enum nf_tables_msg_types {
   NFT_MSG_MAX,
 };
 enum nft_list_attributes {
-  NFTA_LIST_UNPEC,
+  NFTA_LIST_UNSPEC,
   NFTA_LIST_ELEM,
   __NFTA_LIST_MAX
 };
@@ -112,9 +113,16 @@ enum nft_table_attributes {
   NFTA_TABLE_USE,
   NFTA_TABLE_HANDLE,
   NFTA_TABLE_PAD,
+  NFTA_TABLE_USERDATA,
   __NFTA_TABLE_MAX
 };
 #define NFTA_TABLE_MAX (__NFTA_TABLE_MAX - 1)
+enum nft_chain_flags {
+  NFT_CHAIN_BASE = (1 << 0),
+  NFT_CHAIN_HW_OFFLOAD = (1 << 1),
+  NFT_CHAIN_BINDING = (1 << 2),
+};
+#define NFT_CHAIN_FLAGS (NFT_CHAIN_BASE | NFT_CHAIN_HW_OFFLOAD | NFT_CHAIN_BINDING)
 enum nft_chain_attributes {
   NFTA_CHAIN_UNSPEC,
   NFTA_CHAIN_TABLE,
@@ -127,6 +135,8 @@ enum nft_chain_attributes {
   NFTA_CHAIN_COUNTERS,
   NFTA_CHAIN_PAD,
   NFTA_CHAIN_FLAGS,
+  NFTA_CHAIN_ID,
+  NFTA_CHAIN_USERDATA,
   __NFTA_CHAIN_MAX
 };
 #define NFTA_CHAIN_MAX (__NFTA_CHAIN_MAX - 1)
@@ -142,6 +152,7 @@ enum nft_rule_attributes {
   NFTA_RULE_PAD,
   NFTA_RULE_ID,
   NFTA_RULE_POSITION_ID,
+  NFTA_RULE_CHAIN_ID,
   __NFTA_RULE_MAX
 };
 #define NFTA_RULE_MAX (__NFTA_RULE_MAX - 1)
@@ -164,6 +175,7 @@ enum nft_set_flags {
   NFT_SET_TIMEOUT = 0x10,
   NFT_SET_EVAL = 0x20,
   NFT_SET_OBJECT = 0x40,
+  NFT_SET_CONCAT = 0x80,
 };
 enum nft_set_policies {
   NFT_SET_POL_PERFORMANCE,
@@ -172,9 +184,16 @@ enum nft_set_policies {
 enum nft_set_desc_attributes {
   NFTA_SET_DESC_UNSPEC,
   NFTA_SET_DESC_SIZE,
+  NFTA_SET_DESC_CONCAT,
   __NFTA_SET_DESC_MAX
 };
 #define NFTA_SET_DESC_MAX (__NFTA_SET_DESC_MAX - 1)
+enum nft_set_field_attributes {
+  NFTA_SET_FIELD_UNSPEC,
+  NFTA_SET_FIELD_LEN,
+  __NFTA_SET_FIELD_MAX
+};
+#define NFTA_SET_FIELD_MAX (__NFTA_SET_FIELD_MAX - 1)
 enum nft_set_attributes {
   NFTA_SET_UNSPEC,
   NFTA_SET_TABLE,
@@ -193,6 +212,7 @@ enum nft_set_attributes {
   NFTA_SET_PAD,
   NFTA_SET_OBJ_TYPE,
   NFTA_SET_HANDLE,
+  NFTA_SET_EXPR,
   __NFTA_SET_MAX
 };
 #define NFTA_SET_MAX (__NFTA_SET_MAX - 1)
@@ -210,6 +230,7 @@ enum nft_set_elem_attributes {
   NFTA_SET_ELEM_EXPR,
   NFTA_SET_ELEM_PAD,
   NFTA_SET_ELEM_OBJREF,
+  NFTA_SET_ELEM_KEY_END,
   __NFTA_SET_ELEM_MAX
 };
 #define NFTA_SET_ELEM_MAX (__NFTA_SET_ELEM_MAX - 1)
@@ -239,6 +260,7 @@ enum nft_verdict_attributes {
   NFTA_VERDICT_UNSPEC,
   NFTA_VERDICT_CODE,
   NFTA_VERDICT_CHAIN,
+  NFTA_VERDICT_CHAIN_ID,
   __NFTA_VERDICT_MAX
 };
 #define NFTA_VERDICT_MAX (__NFTA_VERDICT_MAX - 1)
@@ -256,6 +278,11 @@ enum nft_immediate_attributes {
   __NFTA_IMMEDIATE_MAX
 };
 #define NFTA_IMMEDIATE_MAX (__NFTA_IMMEDIATE_MAX - 1)
+enum nft_bitwise_ops {
+  NFT_BITWISE_BOOL,
+  NFT_BITWISE_LSHIFT,
+  NFT_BITWISE_RSHIFT,
+};
 enum nft_bitwise_attributes {
   NFTA_BITWISE_UNSPEC,
   NFTA_BITWISE_SREG,
@@ -263,6 +290,8 @@ enum nft_bitwise_attributes {
   NFTA_BITWISE_LEN,
   NFTA_BITWISE_MASK,
   NFTA_BITWISE_XOR,
+  NFTA_BITWISE_OP,
+  NFTA_BITWISE_DATA,
   __NFTA_BITWISE_MAX
 };
 #define NFTA_BITWISE_MAX (__NFTA_BITWISE_MAX - 1)
@@ -352,6 +381,7 @@ enum nft_payload_bases {
 enum nft_payload_csum_types {
   NFT_PAYLOAD_CSUM_NONE,
   NFT_PAYLOAD_CSUM_INET,
+  NFT_PAYLOAD_CSUM_SCTP,
 };
 enum nft_payload_csum_flags {
   NFT_PAYLOAD_L4CSUM_PSEUDOHDR = (1 << 0),
@@ -425,6 +455,8 @@ enum nft_meta_keys {
   NFT_META_TIME_NS,
   NFT_META_TIME_DAY,
   NFT_META_TIME_HOUR,
+  NFT_META_SDIF,
+  NFT_META_SDIFNAME,
 };
 enum nft_rt_keys {
   NFT_RT_CLASSID,
@@ -478,6 +510,7 @@ enum nft_socket_attributes {
 enum nft_socket_keys {
   NFT_SOCKET_TRANSPARENT,
   NFT_SOCKET_MARK,
+  NFT_SOCKET_WILDCARD,
   __NFT_SOCKET_MAX
 };
 #define NFT_SOCKET_MAX (__NFT_SOCKET_MAX - 1)
@@ -781,9 +814,15 @@ enum nft_object_attributes {
   NFTA_OBJ_USE,
   NFTA_OBJ_HANDLE,
   NFTA_OBJ_PAD,
+  NFTA_OBJ_USERDATA,
   __NFTA_OBJ_MAX
 };
 #define NFTA_OBJ_MAX (__NFTA_OBJ_MAX - 1)
+enum nft_flowtable_flags {
+  NFT_FLOWTABLE_HW_OFFLOAD = 0x1,
+  NFT_FLOWTABLE_COUNTER = 0x2,
+  NFT_FLOWTABLE_MASK = (NFT_FLOWTABLE_HW_OFFLOAD | NFT_FLOWTABLE_COUNTER)
+};
 enum nft_flowtable_attributes {
   NFTA_FLOWTABLE_UNSPEC,
   NFTA_FLOWTABLE_TABLE,
@@ -915,6 +954,7 @@ enum nft_tunnel_opts_attributes {
   NFTA_TUNNEL_KEY_OPTS_UNSPEC,
   NFTA_TUNNEL_KEY_OPTS_VXLAN,
   NFTA_TUNNEL_KEY_OPTS_ERSPAN,
+  NFTA_TUNNEL_KEY_OPTS_GENEVE,
   __NFTA_TUNNEL_KEY_OPTS_MAX
 };
 #define NFTA_TUNNEL_KEY_OPTS_MAX (__NFTA_TUNNEL_KEY_OPTS_MAX - 1)
@@ -933,6 +973,14 @@ enum nft_tunnel_opts_erspan_attributes {
   __NFTA_TUNNEL_KEY_ERSPAN_MAX
 };
 #define NFTA_TUNNEL_KEY_ERSPAN_MAX (__NFTA_TUNNEL_KEY_ERSPAN_MAX - 1)
+enum nft_tunnel_opts_geneve_attributes {
+  NFTA_TUNNEL_KEY_GENEVE_UNSPEC,
+  NFTA_TUNNEL_KEY_GENEVE_CLASS,
+  NFTA_TUNNEL_KEY_GENEVE_TYPE,
+  NFTA_TUNNEL_KEY_GENEVE_DATA,
+  __NFTA_TUNNEL_KEY_GENEVE_MAX
+};
+#define NFTA_TUNNEL_KEY_GENEVE_MAX (__NFTA_TUNNEL_KEY_GENEVE_MAX - 1)
 enum nft_tunnel_flags {
   NFT_TUNNEL_F_ZERO_CSUM_TX = (1 << 0),
   NFT_TUNNEL_F_DONT_FRAGMENT = (1 << 1),

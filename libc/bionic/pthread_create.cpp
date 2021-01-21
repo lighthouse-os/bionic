@@ -39,6 +39,7 @@
 
 #include <async_safe/log.h>
 
+#include "private/ScopedRWLock.h"
 #include "private/bionic_constants.h"
 #include "private/bionic_defs.h"
 #include "private/bionic_globals.h"
@@ -350,13 +351,14 @@ static int __pthread_start(void* arg) {
   return 0;
 }
 
-// A dummy start routine for pthread_create failures where we've created a thread but aren't
+// A no-op start routine for pthread_create failures where we've created a thread but aren't
 // going to run user code on it. We swap out the user's start routine for this and take advantage
 // of the regular thread teardown to free up resources.
 static void* __do_nothing(void*) {
   return nullptr;
 }
 
+pthread_rwlock_t g_thread_creation_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 __BIONIC_WEAK_FOR_NATIVE_BRIDGE
 int pthread_create(pthread_t* thread_out, pthread_attr_t const* attr,
@@ -405,6 +407,8 @@ int pthread_create(pthread_t* thread_out, pthread_attr_t const* attr,
   __init_user_desc(&tls_descriptor, false, tls);
   tls = &tls_descriptor;
 #endif
+
+  ScopedReadLock locker(&g_thread_creation_lock);
 
   sigset64_t block_all_mask;
   sigfillset64(&block_all_mask);

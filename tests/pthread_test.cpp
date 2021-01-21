@@ -2821,6 +2821,9 @@ TEST(pthread, pthread_attr_getdetachstate__pthread_attr_setdetachstate) {
 }
 
 TEST(pthread, pthread_create__mmap_failures) {
+  // After thread is successfully created, native_bridge might need more memory to run it.
+  SKIP_WITH_NATIVE_BRIDGE;
+
   pthread_attr_t attr;
   ASSERT_EQ(0, pthread_attr_init(&attr));
   ASSERT_EQ(0, pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED));
@@ -2971,4 +2974,49 @@ TEST(pthread, pthread_attr_setinheritsched__takes_effect_despite_SCHED_RESET_ON_
   ASSERT_EQ(SCHED_FIFO  | SCHED_RESET_ON_FORK, actual_policy);
   spin_helper.UnSpin();
   ASSERT_EQ(0, pthread_join(t, nullptr));
+}
+
+extern "C" bool android_run_on_all_threads(bool (*func)(void*), void* arg);
+
+TEST(pthread, run_on_all_threads) {
+#if defined(__BIONIC__)
+  pthread_t t;
+  ASSERT_EQ(
+      0, pthread_create(
+             &t, nullptr,
+             [](void*) -> void* {
+               pthread_attr_t detached;
+               if (pthread_attr_init(&detached) != 0 ||
+                   pthread_attr_setdetachstate(&detached, PTHREAD_CREATE_DETACHED) != 0) {
+                 return reinterpret_cast<void*>(errno);
+               }
+
+               for (int i = 0; i != 1000; ++i) {
+                 pthread_t t1, t2;
+                 if (pthread_create(
+                         &t1, &detached, [](void*) -> void* { return nullptr; }, nullptr) != 0 ||
+                     pthread_create(
+                         &t2, nullptr, [](void*) -> void* { return nullptr; }, nullptr) != 0 ||
+                     pthread_join(t2, nullptr) != 0) {
+                   return reinterpret_cast<void*>(errno);
+                 }
+               }
+
+               if (pthread_attr_destroy(&detached) != 0) {
+                 return reinterpret_cast<void*>(errno);
+               }
+               return nullptr;
+             },
+             nullptr));
+
+  for (int i = 0; i != 1000; ++i) {
+    ASSERT_TRUE(android_run_on_all_threads([](void* arg) { return arg == nullptr; }, nullptr));
+  }
+
+  void *retval;
+  ASSERT_EQ(0, pthread_join(t, &retval));
+  ASSERT_EQ(nullptr, retval);
+#else
+  GTEST_SKIP() << "bionic-only test";
+#endif
 }

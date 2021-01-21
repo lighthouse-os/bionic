@@ -26,11 +26,67 @@ apex {
         "libc_malloc_debug",
         "libc_malloc_hooks",
     ],
+    binaries: [
+        "linkerconfig",
+    ],
     multilib: {
         both: {
-            binaries: ["linker"],
+            binaries: [
+                "crash_dump",
+                "linker",
+            ],
         },
     },
     key: "com.android.runtime.key",
     certificate: ":com.android.runtime.certificate",
+    prebuilts: [
+        "bionic-linker-config",
+    ],
+}
+
+sdk {
+    name: "runtime-module-sdk",
+    defaults: ["linux_bionic_supported"],
+
+    native_header_libs: [
+        "bionic_libc_platform_headers",
+        "libc_headers",
+    ],
+    native_shared_libs: [
+        "libc",
+        "libdl",
+        "libdl_android",
+        "libm",
+    ],
+    native_static_libs: [
+        "libasync_safe",
+        "note_memtag_heap_async",
+        "note_memtag_heap_sync",
+    ],
+    native_objects: [
+        "crtbegin_dynamic",
+        "crtbegin_so",
+        "crtend_android",
+        "crtend_so",
+    ],
+}
+
+module_exports {
+    name: "runtime-module-host-exports",
+    host_supported: true,
+    device_supported: false,
+    compile_multilib: "64",
+
+    native_binaries: ["linkerconfig"],
+    target: {
+        linux_bionic: {
+            native_binaries: ["linker"],
+        },
+    },
+}
+
+linker_config {
+    name: "bionic-linker-config",
+    src: "linker.config.json",
+    installable: false,
 }

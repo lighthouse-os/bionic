@@ -171,6 +171,22 @@ struct kvm_msr_list {
   __u32 nmsrs;
   __u32 indices[0];
 };
+#define KVM_MSR_FILTER_MAX_BITMAP_SIZE 0x600
+struct kvm_msr_filter_range {
+#define KVM_MSR_FILTER_READ (1 << 0)
+#define KVM_MSR_FILTER_WRITE (1 << 1)
+  __u32 flags;
+  __u32 nmsrs;
+  __u32 base;
+  __u8 * bitmap;
+};
+#define KVM_MSR_FILTER_MAX_RANGES 16
+struct kvm_msr_filter {
+#define KVM_MSR_FILTER_DEFAULT_ALLOW (0 << 0)
+#define KVM_MSR_FILTER_DEFAULT_DENY (1 << 0)
+  __u32 flags;
+  struct kvm_msr_filter_range ranges[KVM_MSR_FILTER_MAX_RANGES];
+};
 struct kvm_cpuid_entry {
   __u32 function;
   __u32 eax;
@@ -324,9 +340,13 @@ struct kvm_sync_regs {
 #define KVM_STATE_NESTED_GUEST_MODE 0x00000001
 #define KVM_STATE_NESTED_RUN_PENDING 0x00000002
 #define KVM_STATE_NESTED_EVMCS 0x00000004
+#define KVM_STATE_NESTED_MTF_PENDING 0x00000008
+#define KVM_STATE_NESTED_GIF_SET 0x00000100
 #define KVM_STATE_NESTED_SMM_GUEST_MODE 0x00000001
 #define KVM_STATE_NESTED_SMM_VMXON 0x00000002
 #define KVM_STATE_NESTED_VMX_VMCS_SIZE 0x1000
+#define KVM_STATE_NESTED_SVM_VMCB_SIZE 0x1000
+#define KVM_STATE_VMX_PREEMPTION_TIMER_DEADLINE 0x00000001
 struct kvm_vmx_nested_state_data {
   __u8 vmcs12[KVM_STATE_NESTED_VMX_VMCS_SIZE];
   __u8 shadow_vmcs12[KVM_STATE_NESTED_VMX_VMCS_SIZE];
@@ -337,6 +357,14 @@ struct kvm_vmx_nested_state_hdr {
   struct {
     __u16 flags;
   } smm;
+  __u32 flags;
+  __u64 preemption_timer_deadline;
+};
+struct kvm_svm_nested_state_data {
+  __u8 vmcb12[KVM_STATE_NESTED_SVM_VMCB_SIZE];
+};
+struct kvm_svm_nested_state_hdr {
+  __u64 vmcb_pa;
 };
 struct kvm_nested_state {
   __u16 flags;
@@ -344,10 +372,12 @@ struct kvm_nested_state {
   __u32 size;
   union {
     struct kvm_vmx_nested_state_hdr vmx;
+    struct kvm_svm_nested_state_hdr svm;
     __u8 pad[120];
   } hdr;
   union {
     struct kvm_vmx_nested_state_data vmx[0];
+    struct kvm_svm_nested_state_data svm[0];
   } data;
 };
 struct kvm_pmu_event_filter {

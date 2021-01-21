@@ -57,8 +57,7 @@
 #include "private/ErrnoRestorer.h"
 #include "private/thread_private.h"
 
-#define ALIGNBYTES (sizeof(uintptr_t) - 1)
-#define ALIGN(p) (((uintptr_t)(p) + ALIGNBYTES) &~ ALIGNBYTES)
+#include "private/bsd_sys_param.h" // For ALIGN/ALIGNBYTES.
 
 #define	NDYNAMIC 10		/* add ten more whenever necessary */
 
@@ -773,10 +772,7 @@ char* fgets(char* buf, int n, FILE* fp) {
 // Returns first argument, or nullptr if no characters were read.
 // Does not return nullptr if n == 1.
 char* fgets_unlocked(char* buf, int n, FILE* fp) {
-  if (n <= 0) {
-    errno = EINVAL;
-    return nullptr;
-  }
+  if (n <= 0) __fortify_fatal("fgets: buffer size %d <= 0", n);
 
   _SET_ORIENTATION(fp, -1);
 
@@ -1026,9 +1022,9 @@ int vsnprintf(char* s, size_t n, const char* fmt, va_list ap) {
   __check_count("vsnprintf", "size", n);
 
   // Stdio internals do not deal correctly with zero length buffer.
-  char dummy;
+  char one_byte_buffer[1];
   if (n == 0) {
-    s = &dummy;
+    s = one_byte_buffer;
     n = 1;
   }
 
